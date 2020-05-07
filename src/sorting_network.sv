@@ -6,8 +6,10 @@ module sorting_network #(
   input                                                 rst_i,
   input  [NUMBERS_AMOUNT - 1 : 0][NUMBER_WIDTH - 1 : 0] data_i,
   input                                                 data_valid_i,
+  output                                                ready_o,
   output [NUMBERS_AMOUNT - 1 : 0][NUMBER_WIDTH - 1 : 0] data_o,
-  output                                                data_valid_o
+  output                                                data_valid_o,
+  input                                                 ready_i
 );
 
 localparam int LAYERS_AMOUNT = NUMBERS_AMOUNT + 1;
@@ -73,19 +75,22 @@ always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     network <= '0;
   else
-    network <= network_comb;
+    if( ready_o )
+      network <= network_comb;
 
 always_ff @( posedge clk_i, posedge rst_i )
   if( rst_i )
     data_valid_d <= '0;
   else
-    begin
-      data_valid_d[0] <= data_valid_i;
-      for( int i = 1; i < LAYERS_AMOUNT; i++ )
-        data_valid_d[i] <= data_valid_d[i - 1];
-    end
+    if( ready_o )
+      begin
+        data_valid_d[0] <= data_valid_i;
+        for( int i = 1; i < LAYERS_AMOUNT; i++ )
+          data_valid_d[i] <= data_valid_d[i - 1];
+      end
  
 assign data_o       = network[LAYERS_AMOUNT - 1];
 assign data_valid_o = data_valid_d[LAYERS_AMOUNT - 1];
+assign ready_o      = ready_i || !data_valid_o;
 
 endmodule
