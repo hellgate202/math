@@ -1,7 +1,8 @@
 module pipeline_adder #(
   parameter int NUMBERS_AMOUNT = 10,
   parameter int NUMBER_WIDTH   = 10,
-  parameter int SUM_WIDTH      = NUMBER_WIDTH + $clog2( NUMBERS_AMOUNT )
+  parameter int SUM_WIDTH      = NUMBER_WIDTH + $clog2( NUMBERS_AMOUNT ),
+  parameter int SIGNED         = 0
 )(
   input                                                 clk_i,
   input                                                 rst_i,
@@ -15,6 +16,18 @@ module pipeline_adder #(
 
 localparam int INPUTS_AMOUNT = NUMBERS_AMOUNT % 2 ? NUMBERS_AMOUNT + 1 : NUMBERS_AMOUNT;
 localparam int STAGES_AMOUNT = $clog2( INPUTS_AMOUNT ) + 1;
+
+function logic [SUM_WIDTH - 1 : 0] cast_to_signed_sum_width(
+  input [NUMBER_WIDTH - 1 : 0] data_i
+);
+
+  cast_to_signed_sum_width[NUMBER_WIDTH - 1 : 0] = data_i;
+  if( data_i[NUMBER_WIDTH - 1] )
+    cast_to_signed_sum_width[SUM_WIDTH : NUMBER_WIDTH] = '1;
+  else
+    cast_to_signed_sum_width[SUM_WIDTH : NUMBER_WIDTH] = '0;
+
+endfunction
 
 logic [STAGES_AMOUNT - 1 : 0][INPUTS_AMOUNT - 1 : 0][SUM_WIDTH - 1 : 0] add_stages;
 logic [STAGES_AMOUNT - 1 : 0]                                           valid_d;
@@ -40,12 +53,18 @@ always_ff @( posedge clk_i, posedge rst_i )
           if( INPUTS_AMOUNT != NUMBERS_AMOUNT )
             begin
               for( int k = 0; k < NUMBERS_AMOUNT; k++ )
-                add_stages[i][k]               <= data_i[k];
+                if( SIGNED )
+                  add_stages[i][k] <= cast_to_signed_sum_width( data_i[k] );
+                else
+                  add_stages[i][k] <= data_i[k];
               add_stages[i][INPUTS_AMOUNT - 1] <= SUM_WIDTH'( 0 );
             end
           else
             for( int k = 0; k < NUMBERS_AMOUNT; k++ )
-              add_stages[i][k] <= data_i[k];
+              if( SIGNED )
+                add_stages[i][k] <= cast_to_signed_sum_width( data_i[k] );
+              else
+                add_stages[i][k] <= data_i[k];
         else
           for( int j = 0; j < ( INPUTS_AMOUNT / ( i + 1 ) ); j++ )
             add_stages[i][j] <= add_stages[i - 1][j * 2] + add_stages[i - 1][j * 2 + 1];
