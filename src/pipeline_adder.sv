@@ -23,9 +23,9 @@ function logic [SUM_WIDTH - 1 : 0] cast_to_signed_sum_width(
 
   cast_to_signed_sum_width[NUMBER_WIDTH - 1 : 0] = data_i;
   if( data_i[NUMBER_WIDTH - 1] )
-    cast_to_signed_sum_width[SUM_WIDTH : NUMBER_WIDTH] = '1;
+    cast_to_signed_sum_width[SUM_WIDTH - 1 : NUMBER_WIDTH] = '1;
   else
-    cast_to_signed_sum_width[SUM_WIDTH : NUMBER_WIDTH] = '0;
+    cast_to_signed_sum_width[SUM_WIDTH - 1 : NUMBER_WIDTH] = '0;
 
 endfunction
 
