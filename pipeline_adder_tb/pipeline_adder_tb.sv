@@ -2,8 +2,8 @@
 
 module pipeline_adder_tb;
 
-parameter int NUMBERS_AMOUNT = 16;
-parameter int NUMBER_WIDTH   = 10;
+parameter int NUMBERS_AMOUNT = 8;
+parameter int NUMBER_WIDTH   = 4;
 parameter int CLK_T          = 10_000;
 
 bit                                                clk;
@@ -44,16 +44,16 @@ task automatic send_new_data();
 
   for( int i = 0; i < NUMBERS_AMOUNT; i++ )
     begin
-      num = $urandom_range( 2 ** NUMBER_WIDTH - 1 );
-      data[i] <= num;
-      sum    += num;
+      num     =  signed'( $urandom_range( 2 ** ( NUMBER_WIDTH ) - 1 ) ) - 2 ** ( NUMBER_WIDTH - 1 );
+      data[i] <= NUMBER_WIDTH'( num );
+      sum     += num;
     end
+  sum_q.push_back( sum );
   valid <= 1'b1;
   do
     @( posedge clk );
   while( !DUT.ready_o );
   valid <= 1'b0;
-  sum_q.push_back( sum );
 endtask
 
 task automatic check_sum();
@@ -63,17 +63,17 @@ task automatic check_sum();
       while( DUT.data_valid_o != 1'b1 || DUT.ready_i != 1'b1 )
         @( posedge clk );
       ref_sum = sum_q.pop_front();
-      if( DUT.data_o != ref_sum )
+      if( signed'( DUT.data_o ) !== ref_sum )
         begin
           $display( "Sum missmatch" );
-          $display( "Was %0d", DUT.data_o );
+          $display( "Was %0d", signed'( DUT.data_o ) );
           $display( "Should %0d", ref_sum );
           @( posedge clk );
           $stop();
         end
       else
         begin
-          $display( "Sum match %d", DUT.data_o );
+          $display( "Sum match %d", signed'( DUT.data_o ) );
           @( posedge clk );
         end
     end
@@ -81,7 +81,8 @@ endtask
 
 pipeline_adder #(
   .NUMBERS_AMOUNT ( NUMBERS_AMOUNT ),
-  .NUMBER_WIDTH   ( NUMBER_WIDTH   )
+  .NUMBER_WIDTH   ( NUMBER_WIDTH   ),
+  .SIGNED         ( 1              )
 ) DUT (
   .clk_i          ( clk            ),
   .rst_i          ( rst            ),
